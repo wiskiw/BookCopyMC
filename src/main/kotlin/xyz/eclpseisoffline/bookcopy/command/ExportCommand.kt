@@ -50,7 +50,7 @@ class ExportCommand {
         context: CommandContext<FabricClientCommandSource>,
         name: String,
     ): Int {
-        val book = getPlayerWritableBook(context)
+        val book = getPlayerReadableBook(context)
         val bookContent: BookContent<*, *> = getBookContent(book)
         val bookNbt = createBookNbt(bookContent)
 
@@ -72,9 +72,9 @@ class ExportCommand {
     }
 
     @Throws(CommandSyntaxException::class)
-    private fun getPlayerWritableBook(context: CommandContext<FabricClientCommandSource>): ItemStack {
+    private fun getPlayerReadableBook(context: CommandContext<FabricClientCommandSource>): ItemStack {
         val book = context.source.player.mainHandItem
-        if (!book.`is`(Items.WRITABLE_BOOK)) {
+        if (!book.`is`(Items.WRITABLE_BOOK) && !book.`is`(Items.WRITTEN_BOOK)) {
             val errorMessage = Component.literal("Must hold a book and quill or written book")
             throw SimpleCommandExceptionType(errorMessage).create()
         }
