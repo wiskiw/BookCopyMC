@@ -5,23 +5,20 @@ import com.mojang.brigadier.Message
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
-import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.minecraft.core.component.DataComponents
-import net.minecraft.nbt.CompoundTag
-import net.minecraft.nbt.ListTag
-import net.minecraft.nbt.NbtIo
-import net.minecraft.nbt.StringTag
 import net.minecraft.network.chat.Component
-import net.minecraft.server.network.Filterable
-import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
-import net.minecraft.world.item.component.BookContent
+import net.minecraft.world.item.component.WritableBookContent
+import net.minecraft.world.item.component.WrittenBookContent
 import xyz.eclipseisoffline.bookcopy.BookCopy
 import xyz.eclipseisoffline.bookcopy.BookSuggestionProvider
 import xyz.eclipseisoffline.bookcopy.FileUtils
+import xyz.eclpseisoffline.bookcopy.universalbookcontentbuilder.WritableUniversalBookContentBuilder
+import xyz.eclpseisoffline.bookcopy.universalbookcontentbuilder.WrittenUniversalBookContentBuilder
+import xyz.eclpseisoffline.bookcopy.universalbookcontentio.UniversalBookContentNbtIo
 import java.io.IOException
 
 class ExportCommand {
@@ -50,18 +47,26 @@ class ExportCommand {
         context: CommandContext<FabricClientCommandSource>,
         name: String,
     ): Int {
-        val book = getPlayerReadableBook(context)
-        val bookContent: BookContent<*, *> = getBookContent(book)
-        val bookNbt = createBookNbt(bookContent)
+        val handItem = context.source.player.mainHandItem
+        when {
+            handItem.`is`(Items.WRITABLE_BOOK) -> {
+                tryExportWritableBookContent(
+                    content = handItem.get(DataComponents.WRITABLE_BOOK_CONTENT),
+                    fileName = name,
+                )
+            }
 
-        try {
-            NbtIo.write(bookNbt, FileUtils.getBookSavePath().resolve(name))
-        } catch (exception: IOException) {
-            val errorMessage = Component.literal(
-                "Failed saving book to file (an error occurred while saving, please check your Minecraft logs)"
-            )
-            BookCopy.LOGGER.error("Failed saving book file!", exception)
-            throw SimpleCommandExceptionType(errorMessage).create()
+            handItem.`is`(Items.WRITTEN_BOOK) -> {
+                tryExportWrittenBookContent(
+                    content = handItem.get(DataComponents.WRITTEN_BOOK_CONTENT),
+                    fileName = name,
+                )
+            }
+
+            else -> {
+                val errorMessage = Component.literal("Must hold a book and quill or written book")
+                throw SimpleCommandExceptionType(errorMessage).create()
+            }
         }
 
         context.source.sendFeedback(
@@ -71,74 +76,47 @@ class ExportCommand {
         return Command.SINGLE_SUCCESS
     }
 
-    @Throws(CommandSyntaxException::class)
-    private fun getPlayerReadableBook(context: CommandContext<FabricClientCommandSource>): ItemStack {
-        val book = context.source.player.mainHandItem
-        if (!book.`is`(Items.WRITABLE_BOOK) && !book.`is`(Items.WRITTEN_BOOK)) {
-            val errorMessage = Component.literal("Must hold a book and quill or written book")
-            throw SimpleCommandExceptionType(errorMessage).create()
-        }
-        return book
-    }
-
-    @Throws(CommandSyntaxException::class)
-    private fun getBookContent(book: ItemStack): BookContent<*, *> {
-        val bookContent: BookContent<*, *>? = if (book.`is`(Items.WRITABLE_BOOK)) {
-            book.get(DataComponents.WRITABLE_BOOK_CONTENT)
-        } else {
-            book.get(DataComponents.WRITTEN_BOOK_CONTENT)
-        }
-
-        if (bookContent == null || bookContent.pages().isEmpty()) {
+    private fun tryExportWritableBookContent(
+        content: WritableBookContent?,
+        fileName: String,
+    ) {
+        if (content == null || content.pages().isEmpty()) {
             val errorMessage: Message = Component.literal("Book has no content")
             throw SimpleCommandExceptionType(errorMessage).create()
         }
 
-        return bookContent
-    }
+        val bookContent = WritableUniversalBookContentBuilder(content).build()
 
-    private fun createBookNbt(
-        bookContent: BookContent<*, *>,
-    ): CompoundTag {
-        val pages: List<*> = bookContent.pages()
-        val pagesTag = ListTag()
-        for (page in pages) {
-            val pageString = getPageText(page) ?: continue
-            pagesTag.add(StringTag.valueOf(pageString))
-        }
-
-        return CompoundTag().apply {
-            put("pages", pagesTag)
+        try {
+            UniversalBookContentNbtIo().write(bookContent, FileUtils.getBookSavePath().resolve(fileName))
+        } catch (exception: IOException) {
+            val errorMessage = Component.literal(
+                "Failed saving book to file (an error occurred while saving, please check your Minecraft logs)"
+            )
+            BookCopy.LOGGER.error("Failed saving book file!", exception)
+            throw SimpleCommandExceptionType(errorMessage).create()
         }
     }
 
-    private fun getPageText(page: Any?): String? {
-        return when (page) {
-            is Filterable<*> -> {
-                val notFiltered: Any = page.get(false)
+    private fun tryExportWrittenBookContent(
+        content: WrittenBookContent?,
+        fileName: String,
+    ) {
+        if (content == null || content.pages().isEmpty()) {
+            val errorMessage: Message = Component.literal("Book has no content")
+            throw SimpleCommandExceptionType(errorMessage).create()
+        }
 
-                when (notFiltered) {
-                    is Component -> notFiltered.string
-                    is String -> notFiltered
-                    else -> {
-                        BookCopy.LOGGER.warn(
-                            "Found unexpected filtered page type {}! If you are not a developer, report this issue on the issue tracker at Github",
-                            notFiltered.javaClass
-                        )
-                        null
-                    }
-                }
-            }
+        val bookContent = WrittenUniversalBookContentBuilder(content).build()
 
-            is Component -> page.string
-            is String -> page
-            else -> {
-                BookCopy.LOGGER.warn(
-                    "Found unexpected page type {}! If you are not a developer, report this issue on the issue tracker at Github",
-                    page?.javaClass
-                )
-                null
-            }
+        try {
+            UniversalBookContentNbtIo().write(bookContent, FileUtils.getBookSavePath().resolve(fileName))
+        } catch (exception: IOException) {
+            val errorMessage = Component.literal(
+                "Failed saving book to file (an error occurred while saving, please check your Minecraft logs)"
+            )
+            BookCopy.LOGGER.error("Failed saving book file!", exception)
+            throw SimpleCommandExceptionType(errorMessage).create()
         }
     }
 }
