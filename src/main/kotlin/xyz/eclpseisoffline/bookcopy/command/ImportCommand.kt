@@ -24,11 +24,10 @@ class ImportCommand {
         const val FORMAT_FLAG = "format"
     }
 
-    fun build(): LiteralArgumentBuilder<FabricClientCommandSource> =
-        ClientCommandManager.literal("bookcopy")
+    fun build(): LiteralArgumentBuilder<FabricClientCommandSource> {
+        val rootNode = ClientCommandManager.literal("bookcopy")
             .then(
-                ClientCommandManager
-                    .literal("import")
+                ClientCommandManager.literal("import")
                     .then(
                         ClientCommandManager.argument(Args.FILE_NAME, StringArgumentType.word())
                             .suggests(BookSuggestionProvider())
@@ -39,16 +38,34 @@ class ImportCommand {
                                             context = context,
                                             name = StringArgumentType.getString(context, Args.FILE_NAME),
                                             ioFormat = IoFormatArgumentType.getIoFormat(context, Args.FORMAT_FLAG),
+                                            sign = false,
                                         )
                                     }
+                                    .then(
+                                        ClientCommandManager.literal("sign")
+                                            .executes { context ->
+                                                execute(
+                                                    context = context,
+                                                    name = StringArgumentType.getString(context, Args.FILE_NAME),
+                                                    ioFormat = IoFormatArgumentType.getIoFormat(
+                                                        context, Args.FORMAT_FLAG
+                                                    ),
+                                                    sign = true,
+                                                )
+                                            }
+                                    )
                             )
                     )
             )
+
+        return rootNode
+    }
 
     private fun execute(
         context: CommandContext<FabricClientCommandSource>,
         name: String,
         ioFormat: IoFormat,
+        sign: Boolean,
     ): Int {
         assertPlayerHoldWritableBook(context)
 
@@ -56,8 +73,11 @@ class ImportCommand {
         val bookContent = ioFormat.universalBookContentIo.read(path)
 
         val slot = context.source.player.inventory.selected
+        val optionalTitle =
+            if (sign && !bookContent.title.isNullOrBlank()) Optional.of(bookContent.title) else Optional.empty()
+
         context.source.player.connection.send(
-            ServerboundEditBookPacket(slot, bookContent.pages, Optional.empty())
+            ServerboundEditBookPacket(slot, bookContent.pages, optionalTitle)
         )
         context.source.sendFeedback(Component.literal("Read book from file"))
 
