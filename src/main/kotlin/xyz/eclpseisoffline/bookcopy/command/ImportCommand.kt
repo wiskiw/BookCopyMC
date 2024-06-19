@@ -13,39 +13,47 @@ import net.minecraft.network.protocol.game.ServerboundEditBookPacket
 import net.minecraft.world.item.Items
 import xyz.eclipseisoffline.bookcopy.BookSuggestionProvider
 import xyz.eclipseisoffline.bookcopy.FileUtils
-import xyz.eclpseisoffline.bookcopy.universalbookcontentio.UniversalBookContentNbtIo
+import xyz.eclpseisoffline.bookcopy.command.argumenttype.IoFormatArgumentType
+import xyz.eclpseisoffline.bookcopy.model.IoFormat
 import java.util.*
 
 class ImportCommand {
 
     private object Args {
-        const val NAME = "name"
+        const val FILE_NAME = "file_name"
+        const val FORMAT_FLAG = "format"
     }
 
     fun build(): LiteralArgumentBuilder<FabricClientCommandSource> =
         ClientCommandManager.literal("bookcopy")
             .then(
-                ClientCommandManager.literal("import")
+                ClientCommandManager
+                    .literal("import")
                     .then(
-                        ClientCommandManager.argument(Args.NAME, StringArgumentType.word())
+                        ClientCommandManager.argument(Args.FILE_NAME, StringArgumentType.word())
                             .suggests(BookSuggestionProvider())
-                            .executes { context: CommandContext<FabricClientCommandSource> ->
-                                return@executes execute(
-                                    context = context,
-                                    name = StringArgumentType.getString(context, Args.NAME),
-                                )
-                            }
+                            .then(
+                                ClientCommandManager.argument(Args.FORMAT_FLAG, IoFormatArgumentType.ioFormat())
+                                    .executes { context ->
+                                        execute(
+                                            context = context,
+                                            name = StringArgumentType.getString(context, Args.FILE_NAME),
+                                            ioFormat = IoFormatArgumentType.getIoFormat(context, Args.FORMAT_FLAG),
+                                        )
+                                    }
+                            )
                     )
             )
 
     private fun execute(
         context: CommandContext<FabricClientCommandSource>,
         name: String,
+        ioFormat: IoFormat,
     ): Int {
         assertPlayerHoldWritableBook(context)
 
         val path = FileUtils.getBookSavePath().resolve(name)
-        val bookContent = UniversalBookContentNbtIo().read(path)
+        val bookContent = ioFormat.universalBookContentIo.read(path)
 
         val slot = context.source.player.inventory.selected
         context.source.player.connection.send(
