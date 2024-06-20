@@ -1,4 +1,4 @@
-package xyz.eclpseisoffline.bookcopy.universalbookcontentio
+package xyz.eclpseisoffline.bookcopy.unifiedbookio
 
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import kotlinx.serialization.SerialName
@@ -7,29 +7,29 @@ import kotlinx.serialization.json.Json
 import net.minecraft.nbt.*
 import net.minecraft.network.chat.Component
 import xyz.eclipseisoffline.bookcopy.BookCopy
-import xyz.eclpseisoffline.bookcopy.model.UniversalBookContent
+import xyz.eclpseisoffline.bookcopy.model.UnifiedBook
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
-class UniversalBookContentJsonIo : UniversalBookContentIo {
+class UnifiedBookJsonIo : UnifiedBookIo {
 
     companion object {
         private const val REGEX_SPLIT_PAGE_LINES = """^.*?(?=\n|${'$'})${'$'}|(?<=\n)${'$'}"""
     }
 
     @Throws(IOException::class)
-    override fun write(book: UniversalBookContent, destination: Path) {
+    override fun write(book: UnifiedBook, destination: Path) {
         val jsonModelBook = createJsonBookModel(book)
         val bookJson = Json.encodeToString(JsonBookModel.serializer(), jsonModelBook)
         Files.write(destination, bookJson.toByteArray(StandardCharsets.UTF_8))
     }
 
     private fun createJsonBookModel(
-        universalBookContent: UniversalBookContent,
+        unifiedBook: UnifiedBook,
     ): JsonBookModel {
-        val jsonModelPages = universalBookContent.pages
+        val jsonModelPages = unifiedBook.pages
             .map { pageText ->
                 val lines = REGEX_SPLIT_PAGE_LINES.toRegex(RegexOption.MULTILINE)
                     .findAll(pageText)
@@ -40,14 +40,14 @@ class UniversalBookContentJsonIo : UniversalBookContentIo {
             }
 
         return JsonBookModel(
-            title = universalBookContent.title,
-            author = universalBookContent.author,
+            title = unifiedBook.title,
+            author = unifiedBook.author,
             pages = jsonModelPages,
         )
     }
 
     @Throws(IOException::class)
-    override fun read(source: Path): UniversalBookContent {
+    override fun read(source: Path): UnifiedBook {
         try {
             val jsonBookModelJson = Files.readString(source, StandardCharsets.UTF_8)
             if (jsonBookModelJson == null) {
@@ -66,13 +66,13 @@ class UniversalBookContentJsonIo : UniversalBookContentIo {
         }
     }
 
-    private fun parseJsonBookModel(jsonBookModel: JsonBookModel): UniversalBookContent {
+    private fun parseJsonBookModel(jsonBookModel: JsonBookModel): UnifiedBook {
         val joinedPages = jsonBookModel.pages
             .map { lines ->
                 lines.joinToString("\n")
             }
 
-        return UniversalBookContent(
+        return UnifiedBook(
             title = jsonBookModel.title,
             author = jsonBookModel.author,
             pages = joinedPages,

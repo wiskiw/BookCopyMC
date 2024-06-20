@@ -1,20 +1,20 @@
 package xyz.eclpseisoffline.bookcopy.model
 
-import xyz.eclpseisoffline.bookcopy.universalbookcontentio.UniversalBookContentIo
-import xyz.eclpseisoffline.bookcopy.universalbookcontentio.UniversalBookContentJsonIo
-import xyz.eclpseisoffline.bookcopy.universalbookcontentio.UniversalBookContentNbtIo
+import xyz.eclpseisoffline.bookcopy.unifiedbookio.UnifiedBookIo
+import xyz.eclpseisoffline.bookcopy.unifiedbookio.UnifiedBookJsonIo
+import xyz.eclpseisoffline.bookcopy.unifiedbookio.UnifiedBookNbtIo
 
 enum class IoFormat(
     val flag: String,
-    val universalBookContentIo: UniversalBookContentIo,
+    val unifiedBookIo: UnifiedBookIo,
 ) {
     NBT(
         flag = "-nbt",
-        universalBookContentIo = UniversalBookContentNbtIo(),
+        unifiedBookIo = UnifiedBookNbtIo(),
     ),
     JSON(
         flag = "-json",
-        universalBookContentIo = UniversalBookContentJsonIo(),
+        unifiedBookIo = UnifiedBookJsonIo(),
     )
     ;
 

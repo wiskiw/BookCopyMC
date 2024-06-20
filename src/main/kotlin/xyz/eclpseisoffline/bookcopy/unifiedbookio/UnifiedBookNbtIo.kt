@@ -1,26 +1,26 @@
-package xyz.eclpseisoffline.bookcopy.universalbookcontentio
+package xyz.eclpseisoffline.bookcopy.unifiedbookio
 
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import net.minecraft.nbt.*
 import net.minecraft.network.chat.Component
 import xyz.eclipseisoffline.bookcopy.BookCopy
-import xyz.eclpseisoffline.bookcopy.model.UniversalBookContent
+import xyz.eclpseisoffline.bookcopy.model.UnifiedBook
 import java.io.IOException
 import java.nio.file.Path
 
-class UniversalBookContentNbtIo : UniversalBookContentIo {
+class UnifiedBookNbtIo : UnifiedBookIo {
 
     @Throws(IOException::class)
-    override fun write(book: UniversalBookContent, destination: Path) {
-        val bookNbt = createBookNbt(universalBookContent = book)
+    override fun write(book: UnifiedBook, destination: Path) {
+        val bookNbt = createBookNbt(unifiedBook = book)
         NbtIo.write(bookNbt, destination)
     }
 
     private fun createBookNbt(
-        universalBookContent: UniversalBookContent,
+        unifiedBook: UnifiedBook,
     ): CompoundTag {
         val pagesTag = ListTag()
-        universalBookContent.pages.forEach { pageText ->
+        unifiedBook.pages.forEach { pageText ->
             pagesTag.add(StringTag.valueOf(pageText))
         }
 
@@ -30,7 +30,7 @@ class UniversalBookContentNbtIo : UniversalBookContentIo {
     }
 
     @Throws(IOException::class)
-    override fun read(source: Path): UniversalBookContent {
+    override fun read(source: Path): UnifiedBook {
         try {
             val bookNbt = NbtIo.read(source)
             if (bookNbt == null) {
@@ -48,10 +48,10 @@ class UniversalBookContentNbtIo : UniversalBookContentIo {
         }
     }
 
-    private fun parseBookNbt(bookNbt: CompoundTag): UniversalBookContent {
+    private fun parseBookNbt(bookNbt: CompoundTag): UnifiedBook {
         val pages = bookNbt.getList("pages", Tag.TAG_STRING.toInt()).map { it.asString }
 
-        return UniversalBookContent(
+        return UnifiedBook(
             title = null,
             author = null,
             pages = pages,

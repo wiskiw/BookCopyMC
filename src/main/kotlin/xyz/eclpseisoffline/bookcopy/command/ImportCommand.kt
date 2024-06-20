@@ -36,7 +36,7 @@ class ImportCommand {
                                     .executes { context ->
                                         execute(
                                             context = context,
-                                            name = StringArgumentType.getString(context, Args.FILE_NAME),
+                                            fileName = StringArgumentType.getString(context, Args.FILE_NAME),
                                             ioFormat = IoFormatArgumentType.getIoFormat(context, Args.FORMAT_FLAG),
                                             sign = false,
                                         )
@@ -46,7 +46,7 @@ class ImportCommand {
                                             .executes { context ->
                                                 execute(
                                                     context = context,
-                                                    name = StringArgumentType.getString(context, Args.FILE_NAME),
+                                                    fileName = StringArgumentType.getString(context, Args.FILE_NAME),
                                                     ioFormat = IoFormatArgumentType.getIoFormat(
                                                         context, Args.FORMAT_FLAG
                                                     ),
@@ -63,23 +63,24 @@ class ImportCommand {
 
     private fun execute(
         context: CommandContext<FabricClientCommandSource>,
-        name: String,
+        fileName: String,
         ioFormat: IoFormat,
         sign: Boolean,
     ): Int {
         assertPlayerHoldWritableBook(context)
 
-        val path = FileUtils.getBookSavePath().resolve(name)
-        val bookContent = ioFormat.universalBookContentIo.read(path)
+        val path = FileUtils.getBookSavePath().resolve(fileName)
+        val unifiedBook = ioFormat.unifiedBookIo.read(path)
 
         val slot = context.source.player.inventory.selected
         val optionalTitle =
-            if (sign && !bookContent.title.isNullOrBlank()) Optional.of(bookContent.title) else Optional.empty()
+            if (sign && !unifiedBook.title.isNullOrBlank()) Optional.of(unifiedBook.title)
+            else Optional.empty()
 
         context.source.player.connection.send(
-            ServerboundEditBookPacket(slot, bookContent.pages, optionalTitle)
+            ServerboundEditBookPacket(slot, unifiedBook.pages, optionalTitle)
         )
-        context.source.sendFeedback(Component.literal("Read book from file"))
+        context.source.sendFeedback(Component.literal("Book read from the '$fileName'"))
 
         return Command.SINGLE_SUCCESS
     }
