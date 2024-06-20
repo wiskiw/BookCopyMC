@@ -1,32 +1,74 @@
-# Book Copy
+# Book Copy (Extended)
 
-![Modrinth Version](https://img.shields.io/modrinth/v/jkOtP64i?logo=modrinth&color=008800)
-![Modrinth Game Versions](https://img.shields.io/modrinth/game-versions/jkOtP64i?logo=modrinth&color=008800)
-![Modrinth Downloads](https://img.shields.io/modrinth/dt/jkOtP64i?logo=modrinth&color=008800)
+This is a fork of the client-side [eclipseisoffline's](https://github.com/eclipseisoffline) [Book Copy](https://github.com/eclipseisoffline/bookcopy/tree/main) mod.
 
-This mod adds a simple client-side `/bookcopy` command, which allows you to save written books and
-import them later in another book.
+> This mod adds a simple client-side `/bookcopy` command, allowing you to save written books and import them later into another book.
 
-Feel free to report any bugs, or suggest new features, at the issue tracker.
+## Main Feature
+* **NBT Export/Import**: Support for exporting and importing books to NBT files.
+* **JSON Export/Import**: Support for exporting and importing books to JSON files using a proprietary format.
+* **Autosign Option**: Added an autosign option for the import command.
+* **Improved Format Support**: Simplified the process of adding new import/export formats.
 
-## License
+## Features
 
-This mod is licensed under GNU GPLv3.
+### Export Book
+You can export signed and unsigned books (Book and Quill) that the player holds in the main hand using the following command:
+```
+/bookcopy export <filename> <format>
+```
+- `<filename>` - Destination filename stored in the `.minecraft/config/bookcopy/` folder.
+- `<format>` - One of the supported export formats: `-json`, `-nbt`.
 
-## Usage
+Usage examples:
+```
+/bookcopy export firstbook.nbt -nbt
+/bookcopy export secondbook.json -json
+/bookcopy export otherbook.txt -json
+```
 
-Mod builds can be found [here](https://github.com/eclipseisoffline/bookcopy/packages/2096411) and on [Modrinth](https://modrinth.com/mod/book-copy).
+### Import Book
+You can import and sign book content to the Book and Quill that the player holds in the main hand using the following command:
+```
+/bookcopy import <filename> <format> [sign]
+```
+- `<filename>` - Source filename stored in the `.minecraft/config/bookcopy/` folder.
+- `<format>` - One of the supported export formats: `-json`, `-nbt`.
+- `[sign]` - Optional flag that will sign the book if the book's title exists in the imported file.
 
-This mod is currently available for Minecraft 1.21, 1.20.5+6/1.20.4 (no longer updated) and 1.20.1 with Fabric loader 0.15.11 or later.
-Version port requests can be made at the issue tracker. The Fabric API is required.
+Usage examples:
+```
+/bookcopy import firstbook.nbt -nbt
+/bookcopy import secondbook.json -json sign
+/bookcopy import otherbook.txt -json sign
+```
 
-This mod adds one simple command, `/bookcopy`. It can be used as follows:
+## Format Examples
+### JSON
+```json
+{
+  "title": "Book Name Here",
+  "author": "Player22",
+  "pages": [
+    [
+      "The first line",
+      "",
+      "Third line, page 1",
+      "An empty line is next",
+      ""
+    ],
+    [
+      "Line 1, page 2"
+    ]
+  ]
+}
+```
 
-- `/bookcopy export <name>` - exports the contents of the book you're holding to the given filename.
-- `/bookcopy import <name>` - reads the contents of given filename and writes it to the book you're holding.
-
-When exporting, you can use a written book or a book and quill to read from. When importing, you can
-only use a book and quill, since the contents of a written book can't be updated.
-
-Book contents are stored in the NBT format at the `.minecraft/config/bookcopy` folder. Book contents
-can be transferred across worlds.
+### NBT
+```nbt
+"": {
+	title: Book Name Here
+	author: Player845
+	pages: [ "The first line\n\nThird line, page 1\nAn empty line is next\n", "Line 1, page 2", ]
+}
+```
