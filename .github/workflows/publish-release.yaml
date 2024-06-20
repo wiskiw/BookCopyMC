@@ -1,14 +1,19 @@
-name: Build and Release
+name: Build and Draft Release
 
 on:
   push:
     tags:
-      - 'v*'  # Triggers the workflow only on push of tags starting with 'v'
+      - "v*.*.*"  # Triggers the workflow only on push of tags starting with 'v'
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
+
+    env:
+      MOD_NAME: ''
+      MOD_VERSION: ''
+      MOD_JAR: ''
 
     steps:
       - name: Checkout repository
@@ -20,33 +25,31 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Read mod name from gradle.properties
-        id: read_mod_name
+      - name: Prepare environment value
         run: |
-          # Read the mod name from gradle.properties
           MOD_NAME=$(grep 'archives_base_name=' gradle.properties | cut -d'=' -f2)
-          echo "MOD_NAME=MOD_NAME" >> $GITHUB_ENV
+          MOD_VERSION=$(grep 'mod_version=' gradle.properties | cut -d'=' -f2)
+          
+          echo "MOD_NAME=$MOD_NAME" >> $GITHUB_ENV
+          echo "MOD_VERSION=$MOD_VERSION" >> $GITHUB_ENV
+          echo "MOD_JAR=$MOD_NAME-$MOD_VERSION.jar" >> $GITHUB_ENV
+          echo "MOD_SOURCE_JAR=$MOD_NAME-$MOD_VERSION-sources.jar" >> $GITHUB_ENV
 
-      - name: Build the mod
-        run: ./gradlew build
+      - name: Build mod
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          arguments: build
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        if: ${{ success() }}  # Ensure this step runs only if previous steps succeeded
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          draft: true
-          prerelease: true
-
-      - name: Upload Jar to Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./build/libs/${{ env.MOD_NAME }}-${{ github.ref_name }}.jar
-          asset_name: ${{ env.MOD_NAME }}-${{ github.ref_name }}.jar
-          asset_content_type: application/java-archive
+          tag_name: v${{ env.MOD_VERSION }}
+          name: "Release v.${{ env.MOD_VERSION }}"
+          draft: false
+          prerelease: false
+          files: |
+            ./build/libs/${{ env.MOD_JAR }}
+            ./build/libs/${{ env.MOD_SOURCE_JAR }}
