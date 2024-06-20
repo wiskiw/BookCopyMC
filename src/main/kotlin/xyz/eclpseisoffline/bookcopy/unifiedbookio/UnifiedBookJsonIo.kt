@@ -3,6 +3,7 @@ package xyz.eclpseisoffline.bookcopy.unifiedbookio
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import net.minecraft.nbt.*
 import net.minecraft.network.chat.Component
@@ -51,7 +52,7 @@ class UnifiedBookJsonIo : UnifiedBookIo {
         try {
             val jsonBookModelJson = Files.readString(source, StandardCharsets.UTF_8)
             if (jsonBookModelJson == null) {
-                val errorMessage = Component.literal("Failed reading book file (no JSON data found)")
+                val errorMessage = Component.literal("Failed reading book in '${source.fileName}' (no JSON data found)")
                 throw SimpleCommandExceptionType(errorMessage).create()
             }
             val jsonBookModel = Json.decodeFromString<JsonBookModel>(jsonBookModelJson)
@@ -59,9 +60,16 @@ class UnifiedBookJsonIo : UnifiedBookIo {
 
         } catch (exception: IOException) {
             val errorMessage = Component.literal(
-                "Failed reading book file (an error occurred while reading, please check your Minecraft logs)"
+                "Failed reading '${source.fileName}'"
             )
             BookCopy.LOGGER.error("Failed reading book file!", exception)
+            throw SimpleCommandExceptionType(errorMessage).create()
+
+        } catch (exception : SerializationException){
+            val errorMessage = Component.literal(
+                "Invalid JSON book format in '${source.fileName}'"
+            )
+            BookCopy.LOGGER.error("Invalid JSON book format in '${source.fileName}'", exception)
             throw SimpleCommandExceptionType(errorMessage).create()
         }
     }
