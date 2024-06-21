@@ -1,9 +1,9 @@
-name: Build and Draft Release
+name: Build and Release
 
 on:
   push:
     tags:
-      - "v*.*.*"  # Triggers the workflow only on push of tags starting with 'v'
+      - 'v*'  # Triggers the workflow only on push of tags starting with 'v'
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
@@ -14,6 +14,7 @@ jobs:
       MOD_NAME: ''
       MOD_VERSION: ''
       MOD_JAR: ''
+      MOD_SOURCE_JAR: ''
 
     steps:
       - name: Checkout repository
